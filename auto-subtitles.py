@@ -91,7 +91,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate subtitle files from audio or video using Whisper."
     )
-    parser.add_argument("input", help="Path to the input audio/video file or a directory containing files")
+    parser.add_argument("input", nargs="?", default="proccessing", help="Path to the input audio/video file or a directory containing files. Defaults to proccessing.")
     parser.add_argument(
         "-o",
         "--output",
@@ -100,8 +100,8 @@ def main():
     parser.add_argument(
         "-m",
         "--model",
-        default="medium",
-        help="Whisper model to use. Default is medium.",
+        default="small",
+        help="Whisper model to use. Default is small.",
     )
     parser.add_argument(
         "--language",
@@ -112,8 +112,9 @@ def main():
     try:
         input_path = Path(args.input)
         if input_path.is_dir():
+            output_dir = args.output if args.output else args.input
             output_paths = transcribe_directory(
-                args.input, args.output, args.model, args.language
+                args.input, output_dir, args.model, args.language
             )
             for output_path in output_paths:
                 print(f"Subtitles saved to: {output_path}")
