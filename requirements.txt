@@ -2,7 +2,6 @@ torch
 torchvision
 torchaudio
 torchcodec
-openai
 openai-whisper
 opencv-python
 basicsr

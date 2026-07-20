@@ -1,20 +1,43 @@
 import argparse
 import sys
-import time
 from pathlib import Path
 
-from openai import OpenAI
-from openai.error import OpenAIError, RateLimitError
+import whisper
 
 try:
     from tqdm import tqdm
 except ImportError:
     tqdm = None
 
-client = OpenAI()
+WHISPER_MODEL = None
 
 
-def transcribe_to_srt(source_path, output_path=None, model="whisper-1", language=None):
+def get_whisper_model(model_name="small"):
+    global WHISPER_MODEL
+    if WHISPER_MODEL is None or WHISPER_MODEL.name != model_name:
+        WHISPER_MODEL = whisper.load_model(model_name)
+    return WHISPER_MODEL
+
+
+def format_timestamp(seconds: float) -> str:
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    millis = int((seconds - int(seconds)) * 1000)
+    return f"{hours:02}:{minutes:02}:{secs:02},{millis:03}"
+
+
+def segments_to_srt(segments):
+    lines = []
+    for index, segment in enumerate(segments, start=1):
+        start = format_timestamp(segment["start"])
+        end = format_timestamp(segment["end"])
+        text = segment["text"].strip()
+        lines.append(f"{index}\n{start} --> {end}\n{text}\n")
+    return "\n".join(lines)
+
+
+def transcribe_to_srt(source_path, output_path=None, model="small", language=None):
     source = Path(source_path)
     if not source.exists():
         raise FileNotFoundError(f"Input file not found: {source}")
@@ -24,37 +47,13 @@ def transcribe_to_srt(source_path, output_path=None, model="whisper-1", language
     destination = Path(output_path) if output_path else source.with_suffix(".srt")
     destination.parent.mkdir(parents=True, exist_ok=True)
 
-    with source.open("rb") as audio_file:
-        request = {
-            "model": model,
-            "file": audio_file,
-            "response_format": "srt",
-        }
-        if language:
-            request["language"] = language
+    whisper_model = get_whisper_model(model)
+    options = {}
+    if language:
+        options["language"] = language
 
-        max_retries = 5
-        backoff = 1.0
-        while True:
-            try:
-                transcript = client.audio.transcriptions.create(**request)
-                break
-            except RateLimitError as exc:
-                if max_retries <= 0:
-                    raise
-                print(f"Rate limited. Retrying in {backoff} seconds...", file=sys.stderr)
-                time.sleep(backoff)
-                max_retries -= 1
-                backoff *= 2
-            except OpenAIError:
-                raise
-
-    subtitle_text = getattr(transcript, "text", None)
-    if subtitle_text is None:
-        if isinstance(transcript, dict):
-            subtitle_text = transcript.get("text", "")
-        else:
-            subtitle_text = str(transcript)
+    result = whisper_model.transcribe(str(source), **options)
+    subtitle_text = segments_to_srt(result.get("segments", []))
 
     destination.write_text(subtitle_text, encoding="utf-8")
     return destination
@@ -101,8 +100,8 @@ def main():
     parser.add_argument(
         "-m",
         "--model",
-        default="whisper-1",
-        help="Whisper model to use. Default is whisper-1.",
+        default="medium",
+        help="Whisper model to use. Default is medium.",
     )
     parser.add_argument(
         "--language",
