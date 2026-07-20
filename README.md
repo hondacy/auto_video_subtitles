@@ -7,7 +7,9 @@ Requires Python 3.12
 ## Install
 ```
 choco install ffmpeg --version=8.1.2
-# On MacOS / Linux:
+```
+On MacOS / Linux:
+```
 brew install ffmpeg-full
 ```
 Then run:
@@ -28,11 +30,11 @@ pip install -U -r requirements.txt
    ```
    python auto-enhance-video.py
    ```
-3. Generate subtitle `.srt` files for all supported files in `proccessing`:
+3. Optionaly,move enhanced videos to `proccessing` folder, And generate subtitle `.srt` files for all supported files in `proccessing`:
    ```
    python auto-subtitles.py
    ```
-4. Insert subtitles into video files using the YAML config:
+4. After fixing subtaitle errors, Byrn subtitles into video files using the YAML config:
    ```
    python auto-subtitles-insert.py
    ```
