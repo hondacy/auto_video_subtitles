@@ -1,7 +1,6 @@
+import subprocess
 import cv2
 from pathlib import Path
-
-import torchaudio
 
 
 def find_input_dir():
@@ -65,6 +64,8 @@ supported_extensions = {
     ".mp4", ".mov", ".avi", ".mkv", ".webm", ".flv", ".wmv", ".mpg", ".mpeg", ".m4v"
 }
 
+skip_patterns = ["_enhanced", "_subtitled"]
+
 # Process every file in the input directory
 for video_path in sorted(input_dir.iterdir()):
     if not video_path.is_file():
@@ -72,26 +73,55 @@ for video_path in sorted(input_dir.iterdir()):
     if video_path.suffix.lower() not in supported_extensions:
         print(f"Skipping unsupported file: {video_path.name}")
         continue
+    if any(pattern in video_path.stem for pattern in skip_patterns):
+        print(f"Skipping generated output file: {video_path.name}")
+        continue
 
     print(f"Processing: {video_path.name}")
     output_file = output_dir / f"{video_path.stem}_enhanced{video_path.suffix}"
 
     # 1. Stream video processing frame by frame
-    frame_count = process_video_stream(video_path, output_file)
+    # Current skipped because of quality issues with the enhancement. Uncomment the following line to enable frame-by-frame processing. 
+    # frame_count = process_video_stream(video_path, output_file)
 
-    # 2. Audio Extraction and Enhancement
+    # 2. Audio Extraction and Enhancement using ffmpeg
     try:
-        waveform, sample_rate = torchaudio.load(str(video_path))
-        effects = [
-            ["compand", "0.3,1", "6:-70,-60,-20", "-90", "-90", "0", "0", "0"],
-            ["highpass", "200"]
+        audio_output = output_dir / f"{video_path.stem}_audio.wav"
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-af",
+            "highpass=f=120,afftdn=nf=-25,volume=5dB",
+            str(audio_output),
         ]
-        enhanced_waveform, new_sample_rate = torchaudio.sox_effects.apply_effects_tensor(
-            waveform, sample_rate, effects
-        )
+        subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
+
+        # Combine enhanced audio with original video stream
+        output_file = output_dir / f"{video_path.stem}_enhanced{video_path.suffix}"
+        remux_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(video_path),
+            "-i",
+            str(audio_output),
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            str(output_file),
+        ]
+        subprocess.run(remux_cmd, check=True, capture_output=True)
         audio_ok = True
-    except Exception as exc:
-        print(f"Warning: audio could not be processed for {video_path.name}: {exc}")
+        audio_output.unlink(missing_ok=True)
+    except subprocess.CalledProcessError as exc:
+        print(f"Warning: audio could not be processed for {video_path.name}: {exc.stderr.decode().strip()}")
         audio_ok = False
 
     if audio_ok:

@@ -16,18 +16,19 @@ pip install -U -r requirements.txt
 
 ## Workflow
 
-0. Prepare The Video File:
+1. Prepare The Video File:
     Cut the video with lossless-cut (https://github.com/mifi/lossless-cut/releases/)
-1. Place all source media files in the `proccessing` directory.
-2. Run video enhancement for all supported files:
+2. Place all source media files in the `proccessing` directory.
+3. Run video enhancement for all supported files:
    ```
    python auto-enhance-video.py
    ```
-3. Generate subtitle `.srt` files for all supported files in `proccessing`:
+4. Copy enhanced files back to "proccessing" folder
+5. Generate subtitle `.srt` files for all supported files in `proccessing`:
    ```
    python auto-subtitles.py
    ```
-4. Insert subtitles into video files using the YAML config:
+6. Insert subtitles into video files using the YAML config:
    ```
    python auto-subtitles-insert.py
    ```
