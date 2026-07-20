@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Create Virtual Environment",
+            "type": "shell",
+            "windows": {
+                "command": "if (not exist .venv) (python -m venv .venv && .venv\\Scripts\\pip install -r requirements.txt)"
+            },
+            "osx": {
+                "command": "if [ ! -d '.venv' ]; then python3.12 -m venv .venv && .venv/bin/pip install --upgrade pip && .venv/bin/pip install -r requirements.txt; fi"
+            },
+            "linux": {
+                "command": "if [ ! -d '.venv' ]; then python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt; fi"
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        }
+    ]
+}

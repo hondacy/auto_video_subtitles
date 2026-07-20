@@ -7,6 +7,11 @@ Requires Python 3.12
 ## Install
 ```
 choco install ffmpeg --version=8.1.2
+# On MacOS / Linux:
+brew install ffmpeg-full
+```
+Then run:
+```
 cd auto_video_subtitles
 python -m venv .venv
 .venv\Scripts\activate.bat
