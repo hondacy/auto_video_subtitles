@@ -3,3 +3,4 @@
 # Except this .gitignore file so the folder structure is tracked
 !.gitignore
 !.gitkeep
+!*.srt

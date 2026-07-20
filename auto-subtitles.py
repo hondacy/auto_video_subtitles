@@ -1,3 +1,5 @@
+# For auto generating subtitle from video file with OpenAI whisper model
+
 import argparse
 import sys
 from pathlib import Path
