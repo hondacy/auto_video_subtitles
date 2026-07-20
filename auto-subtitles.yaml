@@ -1,0 +1,16 @@
+video_input: "proccessing/tzameret1-cut-merged-1784554356784.mp4"
+subtitle_file: "proccessing/tzameret1-cut-merged-1784554356784.srt"
+output_video: "proccessing/tzameret1-cut-merged-1784554356784_subtitled.mp4"
+ffmpeg_path: "ffmpeg"
+burn_in: true
+video_codec: "libx264"
+preset: "medium"
+crf: 18
+subtitle_language: "eng"
+subtitles_style:
+  FontName: "Arial"
+  FontSize: "24"
+  PrimaryColour: "FFFFFF"
+  BackColour: "000000"
+  Outline: "1"
+  Shadow: "2"
