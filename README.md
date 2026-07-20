@@ -1,17 +1,16 @@
 # Auto Video SAubtitles
 
 Generates subtitles in a video using Whisper to generate and XX to input inside the video file
+Requires Python 3.12
+
 
 # Install
 ```
-choco install ffmpeg
+choco install ffmpeg --version=8.1.2
 python -m venv .venv
 .venv\Scripts\activate.bat
 python.exe -m pip install --upgrade pip
-pip install -U openai-whisper
-pip install torch torchvision torchcodec torchaudio
-pip install opencv-python basicsr realesrgan
-
+pip install -U -r ./requirements.txt
 
 ```
 
