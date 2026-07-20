@@ -2,7 +2,9 @@ import argparse
 import sys
 from pathlib import Path
 
-import openai
+from openai import OpenAI
+
+client = OpenAI()
 
 
 def transcribe_to_srt(source_path, output_path=None, model="whisper-1", language=None):
@@ -24,12 +26,14 @@ def transcribe_to_srt(source_path, output_path=None, model="whisper-1", language
         if language:
             request["language"] = language
 
-        transcript = openai.Audio.transcriptions.create(**request)
+        transcript = client.audio.transcriptions.create(**request)
 
-    if isinstance(transcript, dict):
-        subtitle_text = transcript.get("text", "")
-    else:
-        subtitle_text = str(transcript)
+    subtitle_text = getattr(transcript, "text", None)
+    if subtitle_text is None:
+        if isinstance(transcript, dict):
+            subtitle_text = transcript.get("text", "")
+        else:
+            subtitle_text = str(transcript)
 
     destination.write_text(subtitle_text, encoding="utf-8")
     return destination

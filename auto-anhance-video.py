@@ -21,6 +21,7 @@ def open_video_capture(video_path):
 
 
 def enhance_frame(frame):
+    ## Anhance colors and brightness using OpenCV's detailEnhance function
     return cv2.detailEnhance(frame, sigma_s=10, sigma_r=0.15)
 
 
