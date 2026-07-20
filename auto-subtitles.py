@@ -1,8 +1,15 @@
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from openai import OpenAI
+from openai.error import OpenAIError, RateLimitError
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
 
 client = OpenAI()
 
@@ -26,7 +33,21 @@ def transcribe_to_srt(source_path, output_path=None, model="whisper-1", language
         if language:
             request["language"] = language
 
-        transcript = client.audio.transcriptions.create(**request)
+        max_retries = 5
+        backoff = 1.0
+        while True:
+            try:
+                transcript = client.audio.transcriptions.create(**request)
+                break
+            except RateLimitError as exc:
+                if max_retries <= 0:
+                    raise
+                print(f"Rate limited. Retrying in {backoff} seconds...", file=sys.stderr)
+                time.sleep(backoff)
+                max_retries -= 1
+                backoff *= 2
+            except OpenAIError:
+                raise
 
     subtitle_text = getattr(transcript, "text", None)
     if subtitle_text is None:
@@ -52,10 +73,12 @@ def transcribe_directory(source_dir, output_dir=None, model="whisper-1", languag
     media_exts = {".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".mp4", ".mov", ".webm", ".avi", ".mkv"}
     created_files = []
 
-    for child in sorted(source.iterdir()):
-        if not child.is_file() or child.suffix.lower() not in media_exts:
-            continue
+    media_files = [child for child in sorted(source.iterdir()) if child.is_file() and child.suffix.lower() in media_exts]
+    if not media_files:
+        raise FileNotFoundError(f"No supported media files found in directory: {source}")
 
+    iterator = tqdm(media_files, desc="Transcribing files", unit="file") if tqdm else media_files
+    for child in iterator:
         output_path = dest_dir / f"{child.stem}.srt"
         created_files.append(transcribe_to_srt(child, output_path, model, language))
 

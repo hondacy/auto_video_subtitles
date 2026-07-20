@@ -7,3 +7,4 @@ openai-whisper
 opencv-python
 basicsr
 realesrgan
+tqdm
