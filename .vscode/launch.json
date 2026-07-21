@@ -10,9 +10,10 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}\..\.venv\Scripts\python.exe",
-                "OPENAI_KEY": "XX-XX-XX"
+            "preLaunchTask": "Create Virtual Environment",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "windows": {
+                "python": "${workspaceFolder}/.venv/Scripts/python.exe"
             }
         }
     ]

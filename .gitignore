@@ -1,3 +1,3 @@
-proccessing/
-proccessing/.gitkeep
 .vscode/launch.json
+.venv/
+.DS_Store

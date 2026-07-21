@@ -1,0 +1,17 @@
+# video_input: "proccessing/tzameret1-cut-merged-1784554356784.mp4"
+# subtitle_file: "proccessing/tzameret1-cut-merged-1784554356784.srt"
+# output_video: "proccessing/tzameret1-cut-merged-1784554356784_subtitled.mp4"
+ffmpeg_path: "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg"
+# For other OS: ffmpeg_path: "ffmpeg"
+burn_in: true
+video_codec: "libx264"
+preset: "medium"
+crf: 18
+subtitle_language: "heb" # Other options: "eng", "heb", "spa", "fra", etc. (ISO 639-2 language codes)
+subtitles_style:
+  FontName: "Arial"
+  FontSize: "24"
+  PrimaryColour: "FFFFFF"
+  BackColour: "000000"
+  Outline: "1"
+  Shadow: "2"

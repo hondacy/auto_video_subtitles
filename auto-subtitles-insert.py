@@ -1,3 +1,5 @@
+# This script fusses the generated subtitles into the video files using ffmpeg. It reads settings from auto-subtitles.yaml and processes all video files in the specified input directory, adding subtitles either as a selectable track or burning them into the video.
+
 import subprocess
 import sys
 from pathlib import Path
@@ -5,7 +7,7 @@ from pathlib import Path
 import yaml
 
 
-def load_settings(config_path="auto-subtitles.yaml"):
+def load_settings(config_path="auto-subtitles-insert.yaml"):
     config_file = Path(config_path)
     if not config_file.exists():
         raise FileNotFoundError(f"Settings file not found: {config_file}")
@@ -25,6 +27,60 @@ def load_settings(config_path="auto-subtitles.yaml"):
     return settings
 
 
+def escape_ffmpeg_filter_value(value):
+    text = str(value)
+
+    for char in "\\':":
+        text = text.replace(char, f"\\{char}")
+
+    for char in "\\'[],;":
+        text = text.replace(char, f"\\{char}")
+
+    return text
+
+
+def build_subtitles_filter(subtitle_file):
+    subtitle_path = subtitle_file.as_posix() if isinstance(subtitle_file, Path) else str(subtitle_file)
+    return f"subtitles=filename={escape_ffmpeg_filter_value(subtitle_path)}"
+
+
+def ffmpeg_has_filter(ffmpeg_path, filter_name):
+    try:
+        result = subprocess.run(
+            [ffmpeg_path, "-hide_banner", "-filters"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"FFmpeg executable not found: {ffmpeg_path}") from exc
+    except subprocess.CalledProcessError as exc:
+        details = exc.stderr.strip() or exc.stdout.strip()
+        raise RuntimeError(f"Could not inspect FFmpeg filters: {details}") from exc
+
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[1] == filter_name:
+            return True
+
+    return False
+
+
+def validate_ffmpeg_capabilities(settings):
+    if not settings["burn_in"]:
+        return
+
+    ffmpeg_path = settings["ffmpeg_path"]
+    if ffmpeg_has_filter(ffmpeg_path, "subtitles"):
+        return
+
+    raise RuntimeError(
+        "burn_in is true, but this FFmpeg build does not include the 'subtitles' filter. "
+        "Install/use an FFmpeg build configured with --enable-libass, or set burn_in: false "
+        "in auto-subtitles-insert.yaml to add subtitles as a selectable subtitle track instead."
+    )
+
+
 def build_ffmpeg_command(settings, input_video, subtitle_file, output_video):
     ffmpeg_path = settings["ffmpeg_path"]
     burn_in = settings["burn_in"]
@@ -39,7 +95,7 @@ def build_ffmpeg_command(settings, input_video, subtitle_file, output_video):
             "-i",
             str(input_video),
             "-vf",
-            f"subtitles={subtitle_file}",
+            build_subtitles_filter(subtitle_file),
             "-c:v",
             video_codec,
             "-preset",
@@ -75,50 +131,6 @@ def build_ffmpeg_command(settings, input_video, subtitle_file, output_video):
 
     return cmd
 
-    if burn_in:
-        cmd = [
-            ffmpeg_path,
-            "-y",
-            "-i",
-            input_video,
-            "-vf",
-            f"subtitles={subtitle_file}",
-            "-c:v",
-            video_codec,
-            "-preset",
-            str(preset),
-            "-crf",
-            str(crf),
-            "-c:a",
-            "copy",
-            output_video,
-        ]
-    else:
-        # Add a separate subtitle stream
-        cmd = [
-            ffmpeg_path,
-            "-y",
-            "-i",
-            input_video,
-            "-i",
-            subtitle_file,
-            "-c:v",
-            video_codec,
-            "-preset",
-            str(preset),
-            "-crf",
-            str(crf),
-            "-c:a",
-            "copy",
-            "-c:s",
-            "mov_text",
-            "-metadata:s:s:0",
-            f"language={settings.get('subtitle_language', 'eng')}",
-            output_video,
-        ]
-
-    return cmd
-
 
 def run_command(cmd):
     print("Running ffmpeg command:")
@@ -144,6 +156,8 @@ def find_video_files(settings):
 
 def main():
     settings = load_settings()
+    validate_ffmpeg_capabilities(settings)
+
     output_dir = Path(settings["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -168,4 +182,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
