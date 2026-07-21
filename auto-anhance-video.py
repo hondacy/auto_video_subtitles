@@ -1,5 +1,6 @@
 import subprocess
 import cv2
+import numpy as np
 from pathlib import Path
 
 
@@ -20,8 +21,32 @@ def open_video_capture(video_path):
 
 
 def enhance_frame(frame):
-    ## Anhance colors and brightness using OpenCV's detailEnhance function
-    return cv2.detailEnhance(frame, sigma_s=10, sigma_r=0.15)
+    if frame is None or frame.size == 0:
+        return frame
+
+    frame_rgb = frame.astype(np.uint8)
+    bgr_frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+
+    lab = cv2.cvtColor(bgr_frame, cv2.COLOR_BGR2LAB)
+    l_channel, a_channel, b_channel = cv2.split(lab)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    l_channel = clahe.apply(l_channel)
+
+    lab = cv2.merge((l_channel, a_channel, b_channel))
+    enhanced = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+
+    enhanced = cv2.convertScaleAbs(enhanced, alpha=1.06, beta=8)
+
+    hsv = cv2.cvtColor(enhanced, cv2.COLOR_BGR2HSV)
+    hsv[..., 1] = np.clip(hsv[..., 1] * 1.12, 0, 255).astype(np.uint8)
+    enhanced = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+    denoised = cv2.fastNlMeansDenoisingColored(enhanced, None, 5, 5, 7, 21)
+    blurred = cv2.GaussianBlur(denoised, (0, 0), 1.2)
+    enhanced = cv2.addWeighted(denoised, 1.12, blurred, -0.12, 0)
+
+    return cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB)
 
 
 def process_video_stream(video_path, output_path):
@@ -78,13 +103,12 @@ for video_path in sorted(input_dir.iterdir()):
         continue
 
     print(f"Processing: {video_path.name}")
+    temp_output_file = output_dir / f"{video_path.stem}_enhanced_temp{video_path.suffix}"
     output_file = output_dir / f"{video_path.stem}_enhanced{video_path.suffix}"
 
-    # 1. Stream video processing frame by frame
-    # Current skipped because of quality issues with the enhancement. Uncomment the following line to enable frame-by-frame processing. 
-    # frame_count = process_video_stream(video_path, output_file)
+    temp_output_file.unlink(missing_ok=True)
+    frame_count = process_video_stream(video_path, temp_output_file)
 
-    # 2. Audio Extraction and Enhancement using ffmpeg
     try:
         audio_output = output_dir / f"{video_path.stem}_audio.wav"
         ffmpeg_cmd = [
@@ -98,17 +122,19 @@ for video_path in sorted(input_dir.iterdir()):
         ]
         subprocess.run(ffmpeg_cmd, check=True, capture_output=True)
 
-        # Combine enhanced audio with original video stream
-        output_file = output_dir / f"{video_path.stem}_enhanced{video_path.suffix}"
-        remux_cmd = [
+        merge_cmd = [
             "ffmpeg",
             "-y",
             "-i",
-            str(video_path),
+            str(temp_output_file),
             "-i",
             str(audio_output),
             "-c:v",
-            "copy",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "23",
             "-c:a",
             "aac",
             "-map",
@@ -117,16 +143,19 @@ for video_path in sorted(input_dir.iterdir()):
             "1:a:0",
             str(output_file),
         ]
-        subprocess.run(remux_cmd, check=True, capture_output=True)
+        subprocess.run(merge_cmd, check=True, capture_output=True)
         audio_ok = True
         audio_output.unlink(missing_ok=True)
+        temp_output_file.unlink(missing_ok=True)
     except subprocess.CalledProcessError as exc:
         print(f"Warning: audio could not be processed for {video_path.name}: {exc.stderr.decode().strip()}")
         audio_ok = False
+        if temp_output_file.exists():
+            temp_output_file.replace(output_file)
 
     if audio_ok:
-        print(f"Finished {video_path.name}. Enhanced video saved to: {output_file} (audio enhanced too)")
+        print(f"Finished {video_path.name}. Enhanced video saved to: {output_file} ({frame_count} frames, audio enhanced too)")
     else:
-        print(f"Finished {video_path.name}. Enhanced video saved to: {output_file} (audio not enhanced)")
+        print(f"Finished {video_path.name}. Enhanced video saved to: {output_file} ({frame_count} frames, audio not enhanced)")
 
 print(f"Processing complete for all files in the '{input_dir.name}' directory.")
