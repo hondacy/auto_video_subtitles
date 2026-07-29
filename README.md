@@ -33,7 +33,7 @@ pip install -U -r requirements.txt
 4. Optionaly, move enhanced videos back to "proccessing" folder
 5. Generate subtitle `.srt` files for all supported files in `proccessing`:
    ```
-   python auto-subtitles.py
+   python auto-subtitles-generate.py
    ```
 6. Burn subtitles into video files using the YAML config:
    ```
@@ -41,6 +41,7 @@ pip install -U -r requirements.txt
    ```
 
 ## Notes
-- `auto-subtitles.py` processes all supported media files found in `proccessing` by default.
+- `auto-subtitles-generate.py` processes all supported media files found in `proccessing` by default.
 - `auto-subtitles-insert.py` looks for matching `.srt` files in the subtitle directory and outputs subtitled video files to `proccessing/with_subtitles` by default.
-- `auto-subtitles.yaml` contains config for FFmpeg, burning in subtitles, and output directories.
+- `auto-subtitles-generate.yaml` contains config for the number of words per subtitle entry.
+- `auto-subtitles-insert.yaml` contains config for FFmpeg, burning in subtitles, and output directories.

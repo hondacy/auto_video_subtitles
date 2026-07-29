@@ -1,0 +1,1 @@
+words_per_subtitle: 2 # Number of words per subtitle entry; each entry's timing spans exactly from its first word's start time to its last word's end time

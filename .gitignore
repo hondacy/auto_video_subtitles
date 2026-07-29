@@ -1,3 +1,5 @@
 .vscode/launch.json
 .venv/
 .DS_Store
+local_save/
+__pycache__/
