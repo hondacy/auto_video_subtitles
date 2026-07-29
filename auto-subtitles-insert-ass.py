@@ -39,6 +39,7 @@ DEFAULT_STYLE = {
     "BackColour": "000000",
     "Outline": "1",
     "Shadow": "2",
+    "MarginV": "30",
 }
 
 
@@ -57,7 +58,7 @@ def build_ass_style_line(style):
         f"{to_ass_color(merged['PrimaryColour'])},{to_ass_color('FFFFFF')},"
         f"{to_ass_color(merged['PrimaryColour'])},{to_ass_color(merged['BackColour'])},"
         "0,0,0,0,100,100,0,0,1,"
-        f"{merged['Outline']},{merged['Shadow']},2,10,10,10,1"
+        f"{merged['Outline']},{merged['Shadow']},2,10,10,{merged['MarginV']},1"
     )
 
 
